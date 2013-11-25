@@ -39,47 +39,55 @@ class scanner(object):
 			return
 		pybonjour.DNSServiceProcessResult(self.browse_sdRef)
 
-def send(filename, client):
-	with open(filename, 'rb') as f:
-		f.seek(0, 2)
-		size = f.tell()
-		f.seek(0)
+def send(f, client):
+	# f.seek(0, 2)
+	# size = f.tell()
+	# f.seek(0)
 
-		sock = socket.socket()
-		sock.connect(client)
-		sock.send(json.dumps({ "type": "offer", "name": os.path.basename(filename), "size": size }))
-		sock.send('\n')
-		while True:
-			d = f.read(4096)
-			if not d: break
-			sock.send(d)
+	sock = socket.socket()
+	sock.connect(client)
+	# sock.send(json.dumps({ "type": "offer", "name": os.path.basename(filename), "size": size }))
+	sock.send(json.dumps({"type": "offer"}))
+	sock.send('\n')
+	while True:
+		d = f.read(4096)
+		if not d: break
+		sock.send(d)
 
 if __name__ == '__main__':
-	if len(sys.argv) != 2:
-		sys.stderr.write('usage: {0} file\n'.format(sys.argv[0]))
-		sys.exit(1)
+	# if len(sys.argv) != 2:
+	# 	sys.stderr.write('usage: {0} file\n'.format(sys.argv[0]))
+	# 	sys.exit(1)
+	if len(sys.argv) == 2:
+		s = sys.argv[1]
+		dest = (
+			"{0}.{1}.{2}.{3}".format(*(int(s, 16) for s in (s[0:2], s[2:4], s[4:6], s[6:8]))),
+			int(s[8:12], 16)
+		)
+		print "Destination:", dest
+	else:
+		dest = None
 
-	filename = sys.argv[1]
-	s = scanner()
+	if not dest:
+		s = scanner()
 
-	print "Looking for receivers…"
+		print "Looking for receivers…"
 
-	s.scan()
+		s.scan()
 
-	service_list = []
-	chosen_service = None
+		service_list = []
 
-	if s.services:
-		for service in s.services.items():
-			print "[{0}] {1}".format(len(service_list), service[0])
-			service_list.append(service[1])
-		print
+		if s.services:
+			for service in s.services.items():
+				print "[{0}] {1}".format(len(service_list), service[0])
+				service_list.append(service[1])
+			print
 
-		try:
-			choice = raw_input('Send to: ')
-			chosen_service = service_list[int(choice)]
-		except:
-			pass
+			try:
+				choice = raw_input('Send to: ')
+				dest = service_list[int(choice)]
+			except:
+				pass
 
-	if chosen_service:
-		send(filename, chosen_service)
+	if dest:
+		send(sys.stdin, dest)

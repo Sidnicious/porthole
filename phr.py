@@ -1,5 +1,5 @@
 #!/usr/bin/env python2.7
-import socket, pybonjour, select, json, os
+import socket, pybonjour, select, json, os, sys
 
 def get_computer_name():
     try:
@@ -11,7 +11,8 @@ def get_computer_name():
 
 class PortholeReceiver(object):
 
-    def __init__(self):
+    def __init__(self, out):
+        self.out = out
         pass
 
     def listen(self):
@@ -20,6 +21,9 @@ class PortholeReceiver(object):
         listening_sock.listen(5)
 
         addr = listening_sock.getsockname()
+
+        print "Listening on port {0}".format(addr[1])
+        print "Your code is {0:02x}{1:02x}{2:02x}{3:02x}{4:04x}".format(69,200,239,41, addr[1])
 
         sdRef = pybonjour.DNSServiceRegister(
             name=get_computer_name(), regtype='_porthole._tcp', port=addr[1]
@@ -35,13 +39,13 @@ class PortholeReceiver(object):
                     connf = conn.makefile()
                     offer = json.loads(connf.readline())
                     basename = os.path.basename(offer["name"])
-                    choice = raw_input("Hey, do you want this {0}-byte file called {1}?\n[y] ".format(offer["size"], basename))
+                    # choice = raw_input("Hey, do you want this {0}-byte?\n[y] ".format(offer["size"], basename))
+                    choice = None
                     if not choice or choice.lower() in set(('y', 'yes')):
-                        out = open(basename, 'wb')
                         while True:
                             d = connf.read(4096)
                             if not d: break
-                            out.write(d)
+                            self.out.write(d)
                     break
         except KeyboardInterrupt:
             pass
@@ -50,4 +54,10 @@ class PortholeReceiver(object):
 
 
 if __name__ == '__main__':
-    PortholeReceiver().listen()
+    out = sys.stdout
+    if not os.isatty(out.fileno()):
+        out = os.fdopen(os.dup(out.fileno()), 'wb')
+        tty = open('/dev/tty', 'wb')
+        os.dup2(tty.fileno(), sys.stdout.fileno())
+
+    PortholeReceiver(out).listen()
