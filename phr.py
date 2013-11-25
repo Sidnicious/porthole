@@ -38,7 +38,7 @@ class PortholeReceiver(object):
                     conn, addr = listening_sock.accept()
                     connf = conn.makefile()
                     offer = json.loads(connf.readline())
-                    basename = os.path.basename(offer["name"])
+                    # basename = os.path.basename(offer["name"])
                     # choice = raw_input("Hey, do you want this {0}-byte?\n[y] ".format(offer["size"], basename))
                     choice = None
                     if not choice or choice.lower() in set(('y', 'yes')):
